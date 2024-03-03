@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+
+  webclient:
+    image: shlinkio/shlink-web-client:stable
+    container_name: shlink-webclient
+    ports:
+      - 8000:80
+    restart: unless-stopped
+    # volumes:
+    #   - ./servers.json:/usr/share/nginx/html/servers.json:ro
+
+  backend:
+    image: shlinkio/shlink:stable
+    container_name: shlink-backend
+    environment:
+      - DEFAULT_DOMAIN=127.0.0.1:8080
+      - IS_HTTPS_ENABLED=false
+      - DB_USER=shlink
+      - DB_PASSWORD=password
+      - DB_HOST=db
+      - DB_DRIVER=maria
+    ports:
+      - 8080:8080
+    links:
+      - database:db
+    depends_on:
+      - database
+    restart: unless-stopped
+
+  database:
+    image: mariadb:lts
+    container_name: shlink-database
+    environment:
+      - MARIADB_ROOT_PASSWORD=password
+      - MARIADB_USER=shlink
+      - MARIADB_PASSWORD=password
+      - MARIADB_DATABASE=shlink
+    volumes:
+      - shlink-database:/var/lib/mysql:rw
+    restart: always
+
+volumes:
+  shlink-database:

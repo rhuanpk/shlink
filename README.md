@@ -1,5 +1,9 @@
+# Shlink
+
+Self-hosted open-source URL Shortner!
+
 ## Installation
 
-### Docker
+## Commands
 
-
+- `docker exec -it shlink-backend shlink api-key:generate`

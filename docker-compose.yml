@@ -2,29 +2,31 @@ version: '3.8'
 
 services:
 
-  webclient:
+  frontend:
     image: shlinkio/shlink-web-client:stable
-    container_name: shlink-webclient
+    container_name: shlink-frontend
     ports:
-      - 8000:80
+      - 8080:8080
+    networks:
+      - frontend
     restart: unless-stopped
-    # volumes:
-    #   - ./servers.json:/usr/share/nginx/html/servers.json:ro
 
   backend:
     image: shlinkio/shlink:stable
     container_name: shlink-backend
     environment:
-      - DEFAULT_DOMAIN=127.0.0.1:8080
+      - DEFAULT_DOMAIN=server.shlink.rhuanpk.net
       - IS_HTTPS_ENABLED=false
       - DB_USER=shlink
-      - DB_PASSWORD=password
-      - DB_HOST=db
+      - DB_PASSWORD=shlink
+      - DB_HOST=database
       - DB_DRIVER=maria
+      #- SHELL_VERBOSITY=3
     ports:
-      - 8080:8080
-    links:
-      - database:db
+      - 8000:8080
+    networks:
+      - backend
+      - database
     depends_on:
       - database
     restart: unless-stopped
@@ -33,13 +35,46 @@ services:
     image: mariadb:lts
     container_name: shlink-database
     environment:
-      - MARIADB_ROOT_PASSWORD=password
+      - MARIADB_ROOT_PASSWORD=root
       - MARIADB_USER=shlink
-      - MARIADB_PASSWORD=password
+      - MARIADB_PASSWORD=shlink
       - MARIADB_DATABASE=shlink
+    networks:
+      - database
     volumes:
       - shlink-database:/var/lib/mysql:rw
     restart: always
 
+  proxy:
+    image: nginx:alpine
+    container_name: shlink-proxy
+    volumes:
+      - ./nginx/conf:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    ports:
+      - 80:80
+      - 443:443
+    networks:
+      - frontend
+      - backend
+    restart: always
+
+  certbot:
+    image: certbot/certbot
+    container_name: shlink-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt:rw
+      - ./certbot/www:/var/www/certbot:rw
+    command: renew
+
 volumes:
   shlink-database:
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+  database:
+    driver: bridge
